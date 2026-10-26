@@ -15,7 +15,7 @@
         <button id="undoBtn" class="icon-btn" title="Undo (Ctrl+Z)">↶</button>
         <button id="redoBtn" class="icon-btn" title="Redo (Ctrl+Y)">↷</button>
         <span class="divider"></span>
-        <button id="saveBtn" class="btn secondary">Simpan</button>
+        <button id="projectsBtn" class="btn secondary">▦ Proyek</button><button id="saveBtn" class="btn secondary">Simpan</button>
         <button id="exportBtn" class="btn primary">Export PNG ↗</button>
       </div>
     </header>
@@ -94,6 +94,15 @@
             <div class="field"><label>Warna isi</label><input id="propShapeFill" type="color" value="#8b5cf6" class="full-color"></div>
             <div class="field"><label>Sudut membulat (kotak)</label><input id="propRadius" type="range" min="0" max="100" value="0"></div>
           </div>
+          <div id="imageEffects" class="hidden">
+            <div class="section-label">EFEK GAMBAR · GFX</div>
+            <div class="field"><label>Blur <span id="blurLabel">0</span></label><input id="effectBlur" type="range" min="0" max="1" step="0.01" value="0"></div>
+            <div class="field"><label>Kecerahan <span id="brightnessLabel">0</span></label><input id="effectBrightness" type="range" min="-0.5" max="0.5" step="0.01" value="0"></div>
+            <div class="field"><label>Kontras <span id="contrastLabel">0</span></label><input id="effectContrast" type="range" min="-0.5" max="0.5" step="0.01" value="0"></div>
+            <div class="field"><label>Saturasi <span id="saturationLabel">0</span></label><input id="effectSaturation" type="range" min="-1" max="1" step="0.01" value="0"></div>
+            <div class="effect-presets"><button id="effectGrayscale" class="wide-btn">◐ Hitam-putih</button><button id="effectSepia" class="wide-btn">▧ Sepia</button><button id="resetEffects" class="wide-btn">↺ Reset efek</button></div>
+            <p class="hint">Efek diterapkan pada gambar terpilih dan ikut tersimpan saat proyek diekspor.</p>
+          </div>
           <div class="section-label">AKSI OBJEK</div>
           <div class="action-grid"><button id="duplicateObj" class="wide-btn">▣ Duplikat</button><button id="centerObj" class="wide-btn">⊙ Pusatkan</button><button id="flipObj" class="wide-btn">⇋ Balik horizontal</button><button id="deleteObj" class="wide-btn danger-text">⌫ Hapus objek</button></div>
         </div>
@@ -107,6 +116,7 @@
     </nav>
     <div id="mobileBackdrop" class="mobile-backdrop"></div>
     <div id="toast" class="toast" role="status"></div>
+    <div id="projectsModal" class="modal hidden"><div class="modal-card projects-card"><button id="closeProjects" class="modal-close">×</button><div class="modal-icon">▦</div><h2>Proyek saya</h2><p>Proyek disimpan di penyimpanan browser perangkat ini.</p><button id="newProject" class="btn primary full-btn">＋ Buat proyek baru</button><div id="savedProjects" class="saved-projects"></div></div></div>
     <div id="exportModal" class="modal hidden"><div class="modal-card"><button id="closeModal" class="modal-close">×</button><div class="modal-icon">↓</div><h2>Poster siap diekspor</h2><p>Gambar akan dirender pada resolusi asli kanvas.</p><div class="field"><label>Format file</label><select id="exportFormat"><option value="png">PNG · kualitas terbaik</option><option value="jpeg">JPG · ukuran lebih kecil</option></select></div><div class="field"><label>Nama file</label><input id="exportName" value="poster-vposter"></div><button id="downloadExport" class="btn primary full-btn">Download poster</button></div></div>
   </div>
   <script type="module" src="/src/main.js"></script>
