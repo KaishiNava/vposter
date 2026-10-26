@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#11111a" />
-  <title>VPoster Studio — Poster Editor</title>
+  <title>VPoster Studio v2 — Poster & GFX Editor</title>
 </head>
 <body>
   <div id="app">
@@ -19,6 +19,14 @@
         <button id="exportBtn" class="btn primary">Export PNG ↗</button>
       </div>
     </header>
+    <section id="dashboard" class="dashboard-screen">
+      <div class="dashboard-top"><div class="dashboard-brand"><span class="brand-mark">V</span><span>VPoster <b>Studio</b></span></div><span class="dashboard-subtitle">POSTER & GFX WORKSPACE</span></div>
+      <div class="dashboard-hero"><div><p class="eyebrow">CREATIVE WORKSPACE</p><h1>Semua ide poster,<br><span>dalam satu tempat.</span></h1><p class="dashboard-description">Buat poster, edit foto, eksplorasi efek GFX, dan lanjutkan proyek kapan saja.</p></div><button id="dashboardNew" class="btn primary dashboard-new">＋ Proyek baru</button></div>
+      <div class="dashboard-import"><div class="import-symbol">▧</div><div><b>Mulai dari foto</b><small>Upload gambar lalu langsung masuk ke editor poster.</small></div><label for="dashboardImageInput" class="btn secondary">Pilih foto<input id="dashboardImageInput" type="file" accept="image/*" hidden></label></div>
+      <div class="dashboard-section-head"><div><p class="eyebrow">LIBRARY</p><h2>Proyek Anda</h2></div><div class="dashboard-sort">Tersimpan di perangkat <span>▣ IndexedDB</span></div></div>
+      <div id="dashboardProjects" class="dashboard-project-grid"><div class="dashboard-empty">Memuat proyek…</div></div>
+      <div class="dashboard-foot">VPoster Studio · Editor poster & GFX · Proyek tersimpan secara lokal di browser</div>
+    </section>
     <main class="layout">
       <aside class="leftbar">
         <button class="tool active" data-panel="add"><span>＋</span><small>Tambah</small></button>
@@ -65,13 +73,20 @@
         <div class="stage-scroll" id="stageScroll">
           <div class="stage-wrap" id="stageWrap"><canvas id="posterCanvas"></canvas></div>
         </div>
-        <footer class="editor-footer"><span><i class="live-dot"></i> Editor siap</span><span id="footerDimensions">1080 × 1350 px</span><span>VPoster Studio <b>v1.0</b></span></footer>
+        <footer class="editor-footer"><span><i class="live-dot"></i> Editor siap</span><span id="footerDimensions">1080 × 1350 px</span><span>VPoster Studio <b>v2.0</b></span></footer>
       </section>
       <aside id="properties" class="properties">
         <div class="properties-header"><div><p class="eyebrow">OBJECT SETTINGS</p><h2>Properti</h2></div><span class="properties-badge">✦</span></div>
         <div id="noSelection" class="no-selection"><div class="select-art">⌖</div><b>Pilih sebuah objek</b><p>Klik gambar, teks, atau bentuk di kanvas untuk mengatur propertinya.</p></div>
         <div id="objectProperties" class="hidden">
           <div class="selected-object"><span id="objectTypeIcon">▧</span><div><b id="objectType">Objek</b><small id="objectMeta">Dipilih</small></div></div>
+          <div class="section-label">MOVE & TRANSFORM</div>
+          <div class="transform-mode-grid"><button class="transform-mode active" data-transform-mode="move">✥<small>Move</small></button><button class="transform-mode" data-transform-mode="scale">⤢<small>Scale</small></button><button class="transform-mode" data-transform-mode="rotate">⟳<small>Rotate</small></button><button class="transform-mode" data-transform-mode="skew">▱<small>Skew</small></button></div>
+          <div id="transformMove" class="transform-pad"><button data-move="up">↑</button><button data-move="left">←</button><span>GESER LAYER</span><button data-move="right">→</button><button data-move="down">↓</button></div>
+          <div id="transformScale" class="field hidden"><label>Skala <span id="transformScaleLabel">100%</span></label><input id="transformScaleRange" type="range" min="10" max="300" value="100"></div>
+          <div id="transformRotate" class="field hidden"><label>Rotasi dial <span id="transformRotateLabel">0°</span></label><input id="transformRotateRange" type="range" min="-180" max="180" value="0"></div>
+          <div id="transformSkew" class="prop-grid hidden"><div class="field"><label>Skew X</label><input id="transformSkewX" type="number" min="-60" max="60" value="0"></div><div class="field"><label>Skew Y</label><input id="transformSkewY" type="number" min="-60" max="60" value="0"></div></div>
+          <div class="transform-shortcuts"><button id="transformZoomOut" class="wide-btn">− Zoom</button><button id="transformZoomIn" class="wide-btn">＋ Zoom</button><button id="deleteSelectedQuick" class="wide-btn danger-text">⌫ Hapus</button></div>
           <div class="section-label">POSISI & UKURAN</div>
           <div class="prop-grid">
             <div class="field"><label>Posisi X</label><input id="propX" type="number" step="1"></div>
@@ -118,7 +133,7 @@
     </nav>
     <div id="mobileBackdrop" class="mobile-backdrop"></div>
     <div id="toast" class="toast" role="status"></div>
-    <div id="projectsModal" class="modal hidden"><div class="modal-card projects-card"><button id="closeProjects" class="modal-close">×</button><div class="modal-icon">▦</div><h2>Proyek saya</h2><p>Proyek disimpan di penyimpanan browser perangkat ini.</p><button id="newProject" class="btn primary full-btn">＋ Buat proyek baru</button><div id="savedProjects" class="saved-projects"></div></div></div>
+    <div id="projectsModal" class="modal hidden"><div class="modal-card projects-card"><button id="closeProjects" class="modal-close">×</button><div class="modal-icon">▦</div><h2>Proyek saya</h2><p>Proyek tersimpan di IndexedDB browser perangkat ini.</p><button id="newProject" class="btn primary full-btn">＋ Buat proyek baru</button><div id="savedProjects" class="saved-projects"></div></div></div>
     <div id="exportModal" class="modal hidden"><div class="modal-card"><button id="closeModal" class="modal-close">×</button><div class="modal-icon">↓</div><h2>Poster siap diekspor</h2><p>Gambar akan dirender pada resolusi asli kanvas.</p><div class="field"><label>Format file</label><select id="exportFormat"><option value="png">PNG · kualitas terbaik</option><option value="jpeg">JPG · ukuran lebih kecil</option></select></div><div class="field"><label>Nama file</label><input id="exportName" value="poster-vposter"></div><button id="downloadExport" class="btn primary full-btn">Download poster</button></div></div>
   </div>
   <script type="module" src="/src/main.js"></script>
