@@ -60,7 +60,7 @@
       <section class="editor-area">
         <div class="editor-toolbar">
           <div class="crumb"><span>Proyek</span><i>/</i><b id="crumbName">Poster Tanpa Judul</b></div>
-          <div class="editor-tools"><span class="keyboard-tip">Pilih objek · tarik untuk pindahkan</span><button id="fitBtn" class="mini-btn">⊡ Sesuaikan</button></div>
+          <div class="editor-tools"><span class="keyboard-tip">Pilih objek · tarik untuk pindahkan</span><button id="panBtn" class="mini-btn" title="Geser area kerja">✥ Geser</button><button id="fitBtn" class="mini-btn">⊡ Sesuaikan</button></div>
         </div>
         <div class="stage-scroll" id="stageScroll">
           <div class="stage-wrap" id="stageWrap"><canvas id="posterCanvas"></canvas></div>
@@ -96,7 +96,9 @@
           </div>
           <div id="imageEffects" class="hidden">
             <div class="section-label">EFEK GAMBAR · GFX</div>
+            <div class="field"><label>Pilih preset efek</label><select id="effectPreset"><option value="none">Tanpa preset</option><option value="soft">Soft Blur</option><option value="dream">Dream Glow</option><option value="bright">Cahaya terang</option><option value="cinema">Cinematic</option><option value="vivid">Warna vivid</option><option value="mono">Hitam-putih</option><option value="vintage">Vintage</option><option value="frost">Frosted</option></select></div>
             <div class="field"><label>Blur <span id="blurLabel">0</span></label><input id="effectBlur" type="range" min="0" max="1" step="0.01" value="0"></div>
+            <div class="field"><label>Glow / cahaya <span id="glowLabel">0</span></label><input id="effectGlow" type="range" min="0" max="40" step="1" value="0"></div>
             <div class="field"><label>Kecerahan <span id="brightnessLabel">0</span></label><input id="effectBrightness" type="range" min="-0.5" max="0.5" step="0.01" value="0"></div>
             <div class="field"><label>Kontras <span id="contrastLabel">0</span></label><input id="effectContrast" type="range" min="-0.5" max="0.5" step="0.01" value="0"></div>
             <div class="field"><label>Saturasi <span id="saturationLabel">0</span></label><input id="effectSaturation" type="range" min="-1" max="1" step="0.01" value="0"></div>
