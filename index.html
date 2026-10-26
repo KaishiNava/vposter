@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#11111a" />
+  <title>VPoster Studio — Poster Editor</title>
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="VPoster Studio home"><span class="brand-mark">V</span><span>VPoster <b>Studio</b></span></a>
+      <div class="project-name"><span class="status-dot"></span><input id="projectName" value="Poster Tanpa Judul" aria-label="Nama proyek"></div>
+      <div class="top-actions">
+        <button id="undoBtn" class="icon-btn" title="Undo (Ctrl+Z)">↶</button>
+        <button id="redoBtn" class="icon-btn" title="Redo (Ctrl+Y)">↷</button>
+        <span class="divider"></span>
+        <button id="saveBtn" class="btn secondary">Simpan</button>
+        <button id="exportBtn" class="btn primary">Export PNG ↗</button>
+      </div>
+    </header>
+    <main class="layout">
+      <aside class="leftbar">
+        <button class="tool active" data-panel="add"><span>＋</span><small>Tambah</small></button>
+        <button class="tool" data-panel="layers"><span>▤</span><small>Layer</small></button>
+        <button class="tool" data-panel="canvas"><span>▧</span><small>Kanvas</small></button>
+        <div class="left-bottom"><span class="avatar">VS</span><small>Studio</small></div>
+      </aside>
+      <aside class="sidebar">
+        <section id="panel-add" class="panel">
+          <div class="panel-heading"><div><p class="eyebrow">WORKSPACE</p><h2>Tambah elemen</h2></div></div>
+          <label class="upload-card" for="imageInput"><span class="upload-icon">↑</span><b>Upload gambar</b><small>PNG, JPG, WebP · dari perangkatmu</small><input id="imageInput" type="file" accept="image/*" hidden></label>
+          <div class="section-label">ELEMEN CEPAT</div>
+          <div class="quick-grid">
+            <button id="addText" class="quick-card"><span class="qicon text-icon">T</span><b>Tambah teks</b><small>Judul atau keterangan</small></button>
+            <button id="addRect" class="quick-card"><span class="qicon rect-icon">▰</span><b>Bentuk kotak</b><small>Panel dan dekorasi</small></button>
+            <button id="addCircle" class="quick-card"><span class="qicon circle-icon">●</span><b>Bentuk lingkaran</b><small>Aksen visual</small></button>
+            <button id="addLine" class="quick-card"><span class="qicon line-icon">／</span><b>Garis</b><small>Pemisah dan detail</small></button>
+          </div>
+          <div class="section-label">BACKGROUND</div>
+          <div class="field"><label>Warna latar</label><div class="color-field"><input id="bgColor" type="color" value="#171727"><span id="bgHex">#171727</span></div></div>
+          <button id="clearCanvas" class="wide-btn danger-text">Bersihkan kanvas</button>
+          <p class="hint">Tips: pilih objek di kanvas untuk mengubah ukuran, rotasi, dan posisinya.</p>
+        </section>
+        <section id="panel-layers" class="panel hidden">
+          <div class="panel-heading"><div><p class="eyebrow">OBJECT MANAGER</p><h2>Layer</h2></div><span id="layerCount" class="count-pill">0</span></div>
+          <p class="subtle">Pilih layer untuk mengeditnya. Layer paling atas berada di depan.</p>
+          <div id="layersList" class="layers-list"><div class="empty-state">Belum ada elemen.<br>Tambahkan gambar atau teks dulu.</div></div>
+          <div class="layer-actions"><button id="layerUp" class="wide-btn">↑ Naikkan layer</button><button id="layerDown" class="wide-btn">↓ Turunkan layer</button><button id="toggleLock" class="wide-btn">♙ Kunci / buka</button><button id="deleteLayer" class="wide-btn danger-text">Hapus layer terpilih</button></div>
+        </section>
+        <section id="panel-canvas" class="panel hidden">
+          <div class="panel-heading"><div><p class="eyebrow">DOCUMENT</p><h2>Pengaturan kanvas</h2></div></div>
+          <div class="field"><label>Preset ukuran</label><select id="sizePreset"><option value="poster">Poster portrait · 1080 × 1350</option><option value="story">Story · 1080 × 1920</option><option value="square">Kotak · 1080 × 1080</option><option value="landscape">Landscape · 1920 × 1080</option><option value="custom">Ukuran khusus</option></select></div>
+          <div id="customSize" class="size-row hidden"><div class="field"><label>Lebar</label><input id="canvasW" type="number" min="100" max="4000" value="1080"></div><div class="field"><label>Tinggi</label><input id="canvasH" type="number" min="100" max="4000" value="1350"></div><button id="applySize" class="btn primary">Terapkan</button></div>
+          <div class="section-label">TAMPILAN</div>
+          <div class="field"><label>Zoom area kerja</label><div class="zoom-row"><button id="zoomOut" class="icon-btn">−</button><input id="zoomRange" type="range" min="25" max="100" value="60"><button id="zoomIn" class="icon-btn">＋</button><b id="zoomLabel">60%</b></div></div>
+          <div class="info-card"><b>Ukuran export</b><p id="canvasDimensions">1080 × 1350 px</p><small>Export menggunakan resolusi asli kanvas, bukan ukuran preview.</small></div>
+        </section>
+      </aside>
+      <section class="editor-area">
+        <div class="editor-toolbar">
+          <div class="crumb"><span>Proyek</span><i>/</i><b id="crumbName">Poster Tanpa Judul</b></div>
+          <div class="editor-tools"><span class="keyboard-tip">Pilih objek · tarik untuk pindahkan</span><button id="fitBtn" class="mini-btn">⊡ Sesuaikan</button></div>
+        </div>
+        <div class="stage-scroll" id="stageScroll">
+          <div class="stage-wrap" id="stageWrap"><canvas id="posterCanvas"></canvas></div>
+        </div>
+        <footer class="editor-footer"><span><i class="live-dot"></i> Editor siap</span><span id="footerDimensions">1080 × 1350 px</span><span>VPoster Studio <b>v1.0</b></span></footer>
+      </section>
+      <aside class="properties">
+        <div class="properties-header"><div><p class="eyebrow">OBJECT SETTINGS</p><h2>Properti</h2></div><span class="properties-badge">✦</span></div>
+        <div id="noSelection" class="no-selection"><div class="select-art">⌖</div><b>Pilih sebuah objek</b><p>Klik gambar, teks, atau bentuk di kanvas untuk mengatur propertinya.</p></div>
+        <div id="objectProperties" class="hidden">
+          <div class="selected-object"><span id="objectTypeIcon">▧</span><div><b id="objectType">Objek</b><small id="objectMeta">Dipilih</small></div></div>
+          <div class="section-label">POSISI & UKURAN</div>
+          <div class="prop-grid">
+            <div class="field"><label>Posisi X</label><input id="propX" type="number" step="1"></div>
+            <div class="field"><label>Posisi Y</label><input id="propY" type="number" step="1"></div>
+            <div class="field"><label>Lebar</label><input id="propW" type="number" min="1" step="1"></div>
+            <div class="field"><label>Tinggi</label><input id="propH" type="number" min="1" step="1"></div>
+          </div>
+          <div class="field"><label>Rotasi <span id="rotationLabel">0°</span></label><input id="propAngle" type="range" min="-180" max="180" value="0"></div>
+          <div class="field"><label>Opasitas <span id="opacityLabel">100%</span></label><input id="propOpacity" type="range" min="0" max="100" value="100"></div>
+          <div id="textControls">
+            <div class="section-label">TIPOGRAFI</div>
+            <div class="field"><label>Isi teks</label><textarea id="propText" rows="3" placeholder="Tulis teks..."></textarea></div>
+            <div class="field"><label>Font</label><select id="propFont"><option>Arial</option><option>Impact</option><option>Georgia</option><option>Verdana</option><option>Trebuchet MS</option><option>Courier New</option></select></div>
+            <div class="prop-grid"><div class="field"><label>Ukuran font</label><input id="propFontSize" type="number" min="6" max="300" value="48"></div><div class="field"><label>Warna teks</label><input id="propFill" type="color" value="#ffffff" class="full-color"></div></div>
+            <div class="field"><label>Gaya teks</label><div class="toggle-row"><button id="boldBtn" class="toggle-btn">B Tebal</button><button id="italicBtn" class="toggle-btn"><i>I Miring</i></button><button id="alignBtn" class="toggle-btn">⇤ Rata</button></div></div>
+            <div class="field"><label>Outline teks</label><div class="prop-grid"><input id="propStroke" type="color" value="#000000" class="full-color"><input id="propStrokeWidth" type="number" min="0" max="20" value="0" aria-label="Ketebalan outline"></div></div>
+          </div>
+          <div id="shapeControls">
+            <div class="section-label">WARNA OBJEK</div>
+            <div class="field"><label>Warna isi</label><input id="propShapeFill" type="color" value="#8b5cf6" class="full-color"></div>
+            <div class="field"><label>Sudut membulat (kotak)</label><input id="propRadius" type="range" min="0" max="100" value="0"></div>
+          </div>
+          <div class="section-label">AKSI OBJEK</div>
+          <div class="action-grid"><button id="duplicateObj" class="wide-btn">▣ Duplikat</button><button id="centerObj" class="wide-btn">⊙ Pusatkan</button><button id="flipObj" class="wide-btn">⇋ Balik horizontal</button><button id="deleteObj" class="wide-btn danger-text">⌫ Hapus objek</button></div>
+        </div>
+      </aside>
+    </main>
+    <div id="toast" class="toast" role="status"></div>
+    <div id="exportModal" class="modal hidden"><div class="modal-card"><button id="closeModal" class="modal-close">×</button><div class="modal-icon">↓</div><h2>Poster siap diekspor</h2><p>Gambar akan dirender pada resolusi asli kanvas.</p><div class="field"><label>Format file</label><select id="exportFormat"><option value="png">PNG · kualitas terbaik</option><option value="jpeg">JPG · ukuran lebih kecil</option></select></div><div class="field"><label>Nama file</label><input id="exportName" value="poster-vposter"></div><button id="downloadExport" class="btn primary full-btn">Download poster</button></div></div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
