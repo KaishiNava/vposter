@@ -44,3 +44,8 @@
   .stage-wrap{margin-top:-62px}
   .editor-footer span:last-child{display:none}
 }
+
+/* Poster GFX filters and project library */
+.effect-presets{display:grid;grid-template-columns:1fr 1fr;gap:7px}.effect-presets #resetEffects{grid-column:1/-1}.effect-presets .on{border-color:#8c75d5;background:#382e53;color:#d7caff}
+.projects-card{max-height:min(80vh,680px);overflow:auto}.saved-projects{display:flex;flex-direction:column;gap:8px;margin-top:17px}.saved-project-row{display:flex;align-items:center;gap:8px;border:1px solid #373444;background:#22212d;border-radius:10px;padding:7px}.saved-project-open{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;text-align:left;border:0;background:transparent;padding:7px}.saved-project-open b{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.saved-project-open small{font-size:10px;color:#9996ad}.project-delete{width:31px;height:31px;border:1px solid #413344;background:#30232d;color:#f4a5b3;border-radius:8px;font-size:18px}.projects-card .full-btn{margin-top:0}
+@media(max-width:540px){#projectsBtn{display:none}}

@@ -1,4 +1,4 @@
-import { Canvas, FabricImage, IText, Rect, Circle, Line, ActiveSelection } from 'fabric';
+import { Canvas, FabricImage, IText, Rect, Circle, Line, ActiveSelection, filters } from 'fabric';
 import './style.css';
 
 const $ = (id) => document.getElementById(id);
@@ -39,7 +39,7 @@ function scheduleHistory() {
   historyTimer = setTimeout(pushHistory, 180);
 }
 function snapshot() {
-  return JSON.stringify({ version: 1, name: $('projectName').value, width: canvas.getWidth(), height: canvas.getHeight(), json: canvas.toJSON(['name', 'selectable', 'evented', 'lockMovementX', 'lockMovementY']) });
+  return JSON.stringify({ version: 1, name: $('projectName').value, width: canvas.getWidth(), height: canvas.getHeight(), json: canvas.toJSON(['name', 'selectable', 'evented', 'lockMovementX', 'lockMovementY', 'vposterEffects']) });
 }
 function pushHistory() {
   if (restoring) return;
@@ -132,6 +132,8 @@ function updateProperties() {
   $('propOpacity').value = Math.round((obj.opacity ?? 1) * 100); $('opacityLabel').textContent = `${$('propOpacity').value}%`;
   $('textControls').classList.toggle('hidden', !isText(obj));
   $('shapeControls').classList.toggle('hidden', !isShape(obj));
+  $('imageEffects').classList.toggle('hidden', obj.type !== 'image');
+  if (obj.type === 'image') syncEffectControls(obj);
   if (isText(obj)) {
     $('propText').value = obj.text || ''; $('propFont').value = obj.fontFamily || 'Arial';
     $('propFontSize').value = obj.fontSize || 48; $('propFill').value = toHex(obj.fill) || '#ffffff';
@@ -230,12 +232,68 @@ document.addEventListener('keydown', (e) => {
   else if ((e.key === 'Delete' || e.key === 'Backspace') && !editing && active()) { e.preventDefault(); deleteActive(); }
   else if (e.key === 'Escape') { canvas.discardActiveObject(); canvas.requestRenderAll(); updateProperties(); }
 });
+
+const effectDefaults = { blur: 0, brightness: 0, contrast: 0, saturation: 0, grayscale: false, sepia: false };
+function getEffectValues(obj) { return { ...effectDefaults, ...(obj.vposterEffects || {}) }; }
+function syncEffectControls(obj) {
+  const v = getEffectValues(obj);
+  ['blur','brightness','contrast','saturation'].forEach(k => { $(`effect${k[0].toUpperCase()}${k.slice(1)}`).value = v[k]; $(`${k}Label`).textContent = Number(v[k]).toFixed(2); });
+  $('effectGrayscale').classList.toggle('on', v.grayscale); $('effectSepia').classList.toggle('on', v.sepia);
+}
+function applyImageEffects(patch = {}, reset = false) {
+  const obj = active(); if (!obj || obj.type !== 'image') return;
+  const values = reset ? { ...effectDefaults } : { ...getEffectValues(obj), ...patch };
+  const f = [];
+  if (values.blur > 0) f.push(new filters.Blur({ blur: Number(values.blur) }));
+  if (values.brightness !== 0) f.push(new filters.Brightness({ brightness: Number(values.brightness) }));
+  if (values.contrast !== 0) f.push(new filters.Contrast({ contrast: Number(values.contrast) }));
+  if (values.saturation !== 0) f.push(new filters.Saturation({ saturation: Number(values.saturation) }));
+  if (values.grayscale) f.push(new filters.Grayscale());
+  if (values.sepia) f.push(new filters.Sepia());
+  obj.vposterEffects = values; obj.filters = f; obj.applyFilters(); canvas.requestRenderAll(); syncEffectControls(obj); scheduleHistory();
+}
+['blur','brightness','contrast','saturation'].forEach(k => $(`effect${k[0].toUpperCase()}${k.slice(1)}`).addEventListener('input', e => applyImageEffects({ [k]: Number(e.target.value) })));
+$('effectGrayscale').addEventListener('click', () => { const o = active(); if (o?.type === 'image') applyImageEffects({ grayscale: !getEffectValues(o).grayscale }); });
+$('effectSepia').addEventListener('click', () => { const o = active(); if (o?.type === 'image') applyImageEffects({ sepia: !getEffectValues(o).sepia }); });
+$('resetEffects').addEventListener('click', () => applyImageEffects({}, true));
+
+function getSavedProjects() { try { return JSON.parse(localStorage.getItem('vposter-projects') || '[]'); } catch { return []; } }
+function saveCurrentProject(showToast = true) {
+  const data = snapshot(), name = $('projectName').value.trim() || 'Poster Tanpa Judul';
+  const projects = getSavedProjects();
+  const id = window.vposterCurrentProjectId || `vp-${Date.now()}`;
+  window.vposterCurrentProjectId = id;
+  const entry = { id, name, updatedAt: new Date().toISOString(), data };
+  const idx = projects.findIndex(p => p.id === id); if (idx >= 0) projects[idx] = entry; else projects.unshift(entry);
+  localStorage.setItem('vposter-projects', JSON.stringify(projects.slice(0, 30)));
+  localStorage.setItem('vposter-last-project', data);
+  if (showToast) toast('Proyek tersimpan di perangkat ini.');
+  return entry;
+}
+function renderSavedProjects() {
+  const list = $('savedProjects'), projects = getSavedProjects(); list.innerHTML = '';
+  if (!projects.length) { list.innerHTML = '<div class="empty-state">Belum ada proyek tersimpan.<br>Simpan proyek untuk muncul di sini.</div>'; return; }
+  projects.forEach(p => {
+    const row = document.createElement('div'); row.className = 'saved-project-row';
+    const info = document.createElement('button'); info.className = 'saved-project-open';
+    const title = document.createElement('b'); title.textContent = p.name || 'Poster Tanpa Judul';
+    const date = document.createElement('small'); date.textContent = `Diperbarui ${new Date(p.updatedAt).toLocaleDateString('id-ID')}`;
+    info.append(title, date); info.addEventListener('click', async () => { await restoreSnapshot(p.data); window.vposterCurrentProjectId = p.id; $('projectsModal').classList.add('hidden'); toast('Proyek dibuka.'); });
+    const del = document.createElement('button'); del.className = 'project-delete'; del.textContent = '×'; del.title = 'Hapus proyek'; del.addEventListener('click', () => { if (!confirm(`Hapus proyek “${p.name}”?`)) return; localStorage.setItem('vposter-projects', JSON.stringify(getSavedProjects().filter(x => x.id !== p.id))); renderSavedProjects(); });
+    row.append(info, del); list.append(row);
+  });
+}
+$('projectsBtn').addEventListener('click', () => { renderSavedProjects(); $('projectsModal').classList.remove('hidden'); });
+$('closeProjects').addEventListener('click', () => $('projectsModal').classList.add('hidden'));
+$('projectsModal').addEventListener('click', e => { if (e.target === $('projectsModal')) $('projectsModal').classList.add('hidden'); });
+$('newProject').addEventListener('click', () => { if (objects().length && !confirm('Mulai proyek baru? Simpan proyek saat ini terlebih dahulu jika masih diperlukan.')) return; canvas.clear(); canvas.backgroundColor = '#171727'; $('bgColor').value = '#171727'; $('projectName').value = 'Poster Baru'; window.vposterCurrentProjectId = `vp-${Date.now()}`; updateProjectName(); canvas.requestRenderAll(); updateProperties(); scheduleHistory(); $('projectsModal').classList.add('hidden'); fitCanvasToWorkspace(); toast('Kanvas baru siap.'); });
+
 $('saveBtn').addEventListener('click', () => {
   try {
     const blob = new Blob([snapshot()], { type: 'application/json' });
     const url = URL.createObjectURL(blob), a = document.createElement('a');
     a.href = url; a.download = `${safeFilename($('projectName').value)}.vposter.json`; a.click(); URL.revokeObjectURL(url);
-    localStorage.setItem('vposter-last-project', snapshot()); toast('Proyek disimpan sebagai file JSON.');
+    saveCurrentProject(false); toast('Proyek disimpan sebagai file JSON dan daftar proyek.');
   } catch (err) { console.error(err); toast('Tidak bisa menyimpan proyek. Coba kurangi ukuran gambar.'); }
 });
 function safeFilename(s) { return (s || 'poster-vposter').toLowerCase().replace(/[^a-z0-9-_]+/g, '-').replace(/^-+|-+$/g, '') || 'poster-vposter'; }
