@@ -241,7 +241,7 @@ $('downloadExport').addEventListener('click', () => {
   const a = document.createElement('a'); a.href = dataURL; a.download = `${name}.${format === 'jpeg' ? 'jpg' : 'png'}`; a.click();
   $('exportModal').classList.add('hidden'); toast('Export selesai. Cek folder Download kamu.');
 });
-window.addEventListener('resize', () => { if (window.innerWidth < 900) setZoom(Math.min(zoom, .55)); });
+window.addEventListener('resize', () => { if (window.innerWidth < 900) { const area = $('stageScroll'); if (area.clientWidth > 0 && area.clientHeight > 0) setZoom(Math.min(zoom, (area.clientWidth - 24) / canvas.getWidth(), (area.clientHeight - 24) / canvas.getHeight(), 1)); } });
 function closeMobilePanels() {
   $('sidebar').classList.remove('mobile-open'); $('properties').classList.remove('mobile-open');
   $('mobileBackdrop').classList.remove('show');
@@ -259,7 +259,6 @@ function openMobilePanel(which) {
 }
 document.querySelectorAll('[data-mobile]').forEach(btn => btn.addEventListener('click', () => openMobilePanel(btn.dataset.mobile)));
 $('mobileBackdrop').addEventListener('click', closeMobilePanels);
-$('sidebar').id = 'sidebar'; $('properties').id = 'properties';
 canvas.on('selection:created', () => { updateProperties(); if (window.innerWidth <= 900) openMobilePanel('properties'); });
 canvas.on('selection:updated', () => { updateProperties(); if (window.innerWidth <= 900) openMobilePanel('properties'); });
 window.addEventListener('resize', () => { if (window.innerWidth > 900) closeMobilePanels(); else { const area = $('stageScroll'); setZoom(Math.min(zoom, (area.clientWidth - 28) / canvas.getWidth(), (area.clientHeight - 28) / canvas.getHeight(), 1)); } });
