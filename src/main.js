@@ -50,6 +50,7 @@ function pushHistory() {
   if (history.length > 50) history.shift();
   historyIndex = history.length - 1;
   updateUndoRedo();
+  queueAutosave();
 }
 function updateUndoRedo() { $('undoBtn').disabled = historyIndex <= 0; $('redoBtn').disabled = historyIndex >= history.length - 1; }
 async function restoreSnapshot(s) {
@@ -290,43 +291,167 @@ $('effectGrayscale').addEventListener('click', () => { const o = active(); if (o
 $('effectSepia').addEventListener('click', () => { const o = active(); if (o?.type === 'image') applyImageEffects({ sepia: !getEffectValues(o).sepia }); });
 $('resetEffects').addEventListener('click', () => applyImageEffects({}, true));
 
-function getSavedProjects() { try { return JSON.parse(localStorage.getItem('vposter-projects') || '[]'); } catch { return []; } }
-function saveCurrentProject(showToast = true) {
-  const data = snapshot(), name = $('projectName').value.trim() || 'Poster Tanpa Judul';
-  const projects = getSavedProjects();
-  const id = window.vposterCurrentProjectId || `vp-${Date.now()}`;
-  window.vposterCurrentProjectId = id;
-  const entry = { id, name, updatedAt: new Date().toISOString(), data };
-  const idx = projects.findIndex(p => p.id === id); if (idx >= 0) projects[idx] = entry; else projects.unshift(entry);
-  localStorage.setItem('vposter-projects', JSON.stringify(projects.slice(0, 30)));
-  localStorage.setItem('vposter-last-project', data);
-  if (showToast) toast('Proyek tersimpan di perangkat ini.');
-  return entry;
+// Project library uses IndexedDB so projects and embedded image data survive reloads.
+const DB_NAME = 'vposter-studio-db';
+const DB_VERSION = 1;
+let dbPromise;
+function openProjectDB() {
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains('projects')) db.createObjectStore('projects', { keyPath: 'id' });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+  return dbPromise;
 }
-function renderSavedProjects() {
-  const list = $('savedProjects'), projects = getSavedProjects(); list.innerHTML = '';
-  if (!projects.length) { list.innerHTML = '<div class="empty-state">Belum ada proyek tersimpan.<br>Simpan proyek untuk muncul di sini.</div>'; return; }
+async function dbGetAll() {
+  const db = await openProjectDB();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('projects', 'readonly').objectStore('projects').getAll();
+    req.onsuccess = () => resolve((req.result || []).sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt)));
+    req.onerror = () => reject(req.error);
+  });
+}
+async function dbPut(entry) {
+  const db = await openProjectDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('projects', 'readwrite');
+    tx.objectStore('projects').put(entry);
+    tx.oncomplete = () => resolve(entry);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function dbDelete(id) {
+  const db = await openProjectDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('projects', 'readwrite'); tx.objectStore('projects').delete(id);
+    tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+  });
+}
+async function migrateLegacyProjects() {
+  try {
+    const existing = await dbGetAll();
+    if (existing.length) return;
+    const old = JSON.parse(localStorage.getItem('vposter-projects') || '[]');
+    for (const p of old) if (p?.id && p?.data) await dbPut(p);
+    const draft = localStorage.getItem('vposter-last-project');
+    if (!old.length && draft) {
+      const parsed = JSON.parse(draft);
+      if (parsed?.json) await dbPut({ id: `vp-migrated-${Date.now()}`, name: parsed.name || 'Proyek dipulihkan', updatedAt: new Date().toISOString(), data: draft });
+    }
+  } catch (err) { console.warn('Migrasi penyimpanan lama dilewati', err); }
+}
+let autosaveTimer;
+async function saveCurrentProject(showToast = true) {
+  try {
+    const data = snapshot(), name = $('projectName').value.trim() || 'Poster Tanpa Judul';
+    const id = window.vposterCurrentProjectId || `vp-${Date.now()}`;
+    window.vposterCurrentProjectId = id;
+    let thumbnail = '';
+    try { thumbnail = canvas.toDataURL({ format: 'jpeg', quality: .55, multiplier: Math.min(.18, 220 / canvas.getWidth()) }); } catch {}
+    const entry = { id, name, updatedAt: new Date().toISOString(), data, thumbnail, width: canvas.getWidth(), height: canvas.getHeight() };
+    await dbPut(entry);
+    if (showToast) toast('Proyek tersimpan di IndexedDB.');
+    renderDashboardProjects().catch(console.error);
+    return entry;
+  } catch (err) {
+    console.error(err); toast('Penyimpanan gagal. Periksa ruang penyimpanan browser.');
+  }
+}
+function queueAutosave() {
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    if (window.vposterCurrentProjectId && !$('dashboard').classList.contains('visible')) saveCurrentProject(false);
+  }, 900);
+}
+function showDashboard() {
+  $('dashboard').classList.add('visible');
+  document.querySelector('.topbar').classList.add('dashboard-underlay');
+  document.querySelector('.layout').classList.add('dashboard-underlay');
+  $('dashboard').setAttribute('aria-hidden', 'false');
+  renderDashboardProjects().catch(err => { console.error(err); $('dashboardProjects').innerHTML = '<div class="dashboard-empty">Penyimpanan tidak tersedia di mode privat browser ini.</div>'; });
+}
+function showEditor() {
+  $('dashboard').classList.remove('visible');
+  document.querySelector('.topbar').classList.remove('dashboard-underlay');
+  document.querySelector('.layout').classList.remove('dashboard-underlay');
+  $('dashboard').setAttribute('aria-hidden', 'true');
+  setTimeout(() => { resizeStage(); fitCanvasToWorkspace(); canvas.requestRenderAll(); }, 40);
+}
+function createBlankProject(name = 'Poster Baru') {
+  canvas.clear(); canvas.setDimensions({ width: 1080, height: 1350 });
+  canvas.backgroundColor = '#171727'; $('bgColor').value = '#171727'; $('bgHex').textContent = '#171727';
+  $('projectName').value = name; window.vposterCurrentProjectId = `vp-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+  updateProjectName(); canvas.requestRenderAll(); updateProperties(); history = []; historyIndex = -1; pushHistory(); showEditor();
+}
+async function openProjectEntry(p) {
+  await restoreSnapshot(p.data); window.vposterCurrentProjectId = p.id;
+  history = []; historyIndex = -1; pushHistory(); showEditor(); toast('Proyek dibuka dari IndexedDB.');
+}
+async function renderDashboardProjects() {
+  const grid = $('dashboardProjects'); if (!grid) return;
+  const projects = await dbGetAll(); grid.innerHTML = '';
+  if (!projects.length) { grid.innerHTML = '<div class="dashboard-empty"><span>✦</span><b>Belum ada proyek</b><small>Tekan “Proyek baru” atau mulai dari foto untuk membuat desain pertama.</small></div>'; return; }
+  projects.forEach(p => {
+    const card = document.createElement('article'); card.className = 'dashboard-project-card';
+    const open = document.createElement('button'); open.className = 'dashboard-project-open';
+    const preview = document.createElement('div'); preview.className = 'dashboard-project-preview';
+    if (p.thumbnail) { const img = document.createElement('img'); img.src = p.thumbnail; img.alt = ''; preview.append(img); }
+    else { preview.innerHTML = '<span>V</span>'; }
+    const info = document.createElement('div'); info.className = 'dashboard-project-info';
+    const title = document.createElement('b'); title.textContent = p.name || 'Poster Tanpa Judul';
+    const meta = document.createElement('small'); meta.textContent = `${p.width || 1080} × ${p.height || 1350} · ${new Date(p.updatedAt).toLocaleDateString('id-ID')}`;
+    info.append(title, meta); open.append(preview, info); open.addEventListener('click', () => openProjectEntry(p).catch(err => { console.error(err); toast('Proyek gagal dibuka.'); }));
+    const actions = document.createElement('div'); actions.className = 'dashboard-card-actions';
+    const rename = document.createElement('button'); rename.textContent = '•••'; rename.title = 'Ganti nama atau hapus';
+    rename.addEventListener('click', async () => {
+      const action = prompt(`Proyek: ${p.name}\nKetik nama baru, atau HAPUS untuk menghapus proyek ini.`);
+      if (action === null) return;
+      if (action.trim().toUpperCase() === 'HAPUS') { if (confirm(`Hapus proyek “${p.name}” secara permanen dari penyimpanan lokal?`)) { await dbDelete(p.id); renderDashboardProjects(); } return; }
+      if (action.trim()) { p.name = action.trim(); p.updatedAt = new Date().toISOString(); await dbPut(p); renderDashboardProjects(); }
+    });
+    actions.append(rename); card.append(open, actions); grid.append(card);
+  });
+}
+async function renderSavedProjects() {
+  const list = $('savedProjects'), projects = await dbGetAll(); list.innerHTML = '';
+  if (!projects.length) { list.innerHTML = '<div class="empty-state">Belum ada proyek tersimpan.<br>Buat proyek baru untuk mulai.</div>'; return; }
   projects.forEach(p => {
     const row = document.createElement('div'); row.className = 'saved-project-row';
     const info = document.createElement('button'); info.className = 'saved-project-open';
     const title = document.createElement('b'); title.textContent = p.name || 'Poster Tanpa Judul';
     const date = document.createElement('small'); date.textContent = `Diperbarui ${new Date(p.updatedAt).toLocaleDateString('id-ID')}`;
-    info.append(title, date); info.addEventListener('click', async () => { await restoreSnapshot(p.data); window.vposterCurrentProjectId = p.id; $('projectsModal').classList.add('hidden'); toast('Proyek dibuka.'); });
-    const del = document.createElement('button'); del.className = 'project-delete'; del.textContent = '×'; del.title = 'Hapus proyek'; del.addEventListener('click', () => { if (!confirm(`Hapus proyek “${p.name}”?`)) return; localStorage.setItem('vposter-projects', JSON.stringify(getSavedProjects().filter(x => x.id !== p.id))); renderSavedProjects(); });
+    info.append(title, date); info.addEventListener('click', async () => { await openProjectEntry(p); $('projectsModal').classList.add('hidden'); });
+    const del = document.createElement('button'); del.className = 'project-delete'; del.textContent = '×'; del.title = 'Hapus proyek'; del.addEventListener('click', async () => { if (!confirm(`Hapus proyek “${p.name}”?`)) return; await dbDelete(p.id); renderSavedProjects(); renderDashboardProjects(); });
     row.append(info, del); list.append(row);
   });
 }
-$('projectsBtn').addEventListener('click', () => { renderSavedProjects(); $('projectsModal').classList.remove('hidden'); });
+$('dashboardNew').addEventListener('click', () => createBlankProject());
+$('projectsBtn').addEventListener('click', () => { renderSavedProjects().catch(console.error); $('projectsModal').classList.remove('hidden'); });
 $('closeProjects').addEventListener('click', () => $('projectsModal').classList.add('hidden'));
 $('projectsModal').addEventListener('click', e => { if (e.target === $('projectsModal')) $('projectsModal').classList.add('hidden'); });
-$('newProject').addEventListener('click', () => { if (objects().length && !confirm('Mulai proyek baru? Simpan proyek saat ini terlebih dahulu jika masih diperlukan.')) return; canvas.clear(); canvas.backgroundColor = '#171727'; $('bgColor').value = '#171727'; $('projectName').value = 'Poster Baru'; window.vposterCurrentProjectId = `vp-${Date.now()}`; updateProjectName(); canvas.requestRenderAll(); updateProperties(); scheduleHistory(); $('projectsModal').classList.add('hidden'); fitCanvasToWorkspace(); toast('Kanvas baru siap.'); });
-
-$('saveBtn').addEventListener('click', () => {
+$('newProject').addEventListener('click', () => { $('projectsModal').classList.add('hidden'); createBlankProject(); });
+$('dashboardImageInput').addEventListener('change', async e => {
+  const file = e.target.files?.[0]; if (!file) return;
+  try {
+    createBlankProject(file.name.replace(/\.[^.]+$/, '') || 'Poster dari Foto');
+    const url = await readAsDataURL(file); const img = await FabricImage.fromURL(url);
+    const scale = Math.min(canvas.getWidth() * .88 / img.width, canvas.getHeight() * .88 / img.height, 1);
+    img.set({ left: (canvas.getWidth() - img.width * scale) / 2, top: (canvas.getHeight() - img.height * scale) / 2, scaleX: scale, scaleY: scale });
+    addObject(img, file.name.replace(/\.[^.]+$/, '') || 'Foto'); saveCurrentProject(false); toast('Foto dimasukkan ke proyek baru.');
+  } catch (err) { console.error(err); toast('Foto tidak dapat dibuka.'); }
+  e.target.value = '';
+});
+$('saveBtn').addEventListener('click', async () => {
   try {
     const blob = new Blob([snapshot()], { type: 'application/json' });
     const url = URL.createObjectURL(blob), a = document.createElement('a');
     a.href = url; a.download = `${safeFilename($('projectName').value)}.vposter.json`; a.click(); URL.revokeObjectURL(url);
-    saveCurrentProject(false); toast('Proyek disimpan sebagai file JSON dan daftar proyek.');
+    await saveCurrentProject(false); toast('Proyek disimpan sebagai file JSON dan IndexedDB.');
   } catch (err) { console.error(err); toast('Tidak bisa menyimpan proyek. Coba kurangi ukuran gambar.'); }
 });
 function safeFilename(s) { return (s || 'poster-vposter').toLowerCase().replace(/[^a-z0-9-_]+/g, '-').replace(/^-+|-+$/g, '') || 'poster-vposter'; }
@@ -342,6 +467,27 @@ $('downloadExport').addEventListener('click', () => {
   const a = document.createElement('a'); a.href = dataURL; a.download = `${name}.${format === 'jpeg' ? 'jpg' : 'png'}`; a.click();
   $('exportModal').classList.add('hidden'); toast('Export selesai. Cek folder Download kamu.');
 });
+// Compact Move & Transform controls inspired by mobile graphics editors.
+let transformMode = 'move';
+document.querySelectorAll('[data-transform-mode]').forEach(btn => btn.addEventListener('click', () => {
+  transformMode = btn.dataset.transformMode;
+  document.querySelectorAll('[data-transform-mode]').forEach(b => b.classList.toggle('active', b === btn));
+  ['Move','Scale','Rotate','Skew'].forEach((label, i) => $('transform'+label).classList.toggle('hidden', ['move','scale','rotate','skew'][i] !== transformMode));
+}));
+document.querySelectorAll('[data-move]').forEach(btn => btn.addEventListener('click', () => {
+  const o = active(); if (!o) return; const step = 10;
+  const d = { up:[0,-step], down:[0,step], left:[-step,0], right:[step,0] }[btn.dataset.move];
+  modifyObj(x => x.set({ left:(x.left||0)+d[0], top:(x.top||0)+d[1] }));
+}));
+$('transformScaleRange').addEventListener('input', e => { const o=active(); if(!o)return; const ratio=Number(e.target.value)/100; o.set({scaleX:ratio,scaleY:ratio}); $('transformScaleLabel').textContent=`${e.target.value}%`; o.setCoords(); canvas.requestRenderAll(); updateProperties(); });
+$('transformScaleRange').addEventListener('change', scheduleHistory);
+$('transformRotateRange').addEventListener('input', e => { const o=active(); if(!o)return; o.rotate(Number(e.target.value)); $('transformRotateLabel').textContent=`${e.target.value}°`; $('propAngle').value=e.target.value; $('rotationLabel').textContent=`${e.target.value}°`; o.setCoords(); canvas.requestRenderAll(); });
+$('transformRotateRange').addEventListener('change', scheduleHistory);
+$('transformSkewX').addEventListener('change', e => modifyObj(o => o.set('skewX', clamp(e.target.value,-60,60))));
+$('transformSkewY').addEventListener('change', e => modifyObj(o => o.set('skewY', clamp(e.target.value,-60,60))));
+$('transformZoomOut').addEventListener('click', () => setZoom(zoom-.1)); $('transformZoomIn').addEventListener('click', () => setZoom(zoom+.1));
+$('deleteSelectedQuick').addEventListener('click', deleteActive);
+$('projectName').addEventListener('change', () => { updateProjectName(); queueAutosave(); });
 window.addEventListener('resize', () => { if (window.innerWidth <= 900) fitCanvasToWorkspace(); });
 function closeMobilePanels() {
   $('sidebar').classList.remove('mobile-open'); $('properties').classList.remove('mobile-open');
@@ -366,14 +512,8 @@ window.addEventListener('resize', () => { if (window.innerWidth > 900) closeMobi
 
 updateProjectName(); resizeStage(); pushHistory(); updateProperties();
 setTimeout(() => fitCanvasToWorkspace(), 100);
-
-// Restore the last autosaved local draft, when available.
-try {
-  const draft = localStorage.getItem('vposter-last-project');
-  if (draft) {
-    const parsed = JSON.parse(draft);
-    if (parsed?.json && confirm('Ditemukan proyek terakhir yang disimpan di browser. Mau memulihkannya?')) {
-      restoreSnapshot(draft).then(() => { history = []; historyIndex = -1; pushHistory(); toast('Proyek dipulihkan.'); });
-    }
-  }
-} catch { /* Ignore invalid local draft */ }
+// Start at the project dashboard and migrate older localStorage projects when present.
+(async () => {
+  try { await migrateLegacyProjects(); showDashboard(); }
+  catch (err) { console.error(err); showDashboard(); }
+})();
