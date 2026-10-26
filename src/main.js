@@ -223,6 +223,19 @@ function fitCanvasToWorkspace() {
   }
 }
 $('fitBtn').addEventListener('click', fitCanvasToWorkspace);
+// Pan/hand tool: drag the workspace with the toggle or hold Space; middle mouse also works.
+let panMode = false, panning = false, panStart = null, spaceHeld = false;
+const stageScroll = $('stageScroll');
+$('panBtn').addEventListener('click', () => { panMode = !panMode; $('panBtn').classList.toggle('on', panMode); stageScroll.classList.toggle('pan-mode', panMode); toast(panMode ? 'Mode geser aktif — tarik area kerja.' : 'Mode geser nonaktif.'); });
+stageScroll.addEventListener('pointerdown', e => {
+  if (!(panMode || spaceHeld || e.button === 1)) return;
+  panning = true; panStart = { x: e.clientX, y: e.clientY, left: stageScroll.scrollLeft, top: stageScroll.scrollTop };
+  stageScroll.classList.add('panning'); stageScroll.setPointerCapture?.(e.pointerId); e.preventDefault();
+});
+stageScroll.addEventListener('pointermove', e => { if (!panning || !panStart) return; stageScroll.scrollLeft = panStart.left - (e.clientX - panStart.x); stageScroll.scrollTop = panStart.top - (e.clientY - panStart.y); });
+const stopPan = () => { panning = false; panStart = null; stageScroll.classList.remove('panning'); };
+stageScroll.addEventListener('pointerup', stopPan); stageScroll.addEventListener('pointercancel', stopPan);
+
 $('undoBtn').addEventListener('click', () => travelHistory(-1)); $('redoBtn').addEventListener('click', () => travelHistory(1));
 document.addEventListener('keydown', (e) => {
   const tag = document.activeElement?.tagName;
@@ -230,14 +243,17 @@ document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !editing) { e.preventDefault(); travelHistory(e.shiftKey ? 1 : -1); }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y' && !editing) { e.preventDefault(); travelHistory(1); }
   else if ((e.key === 'Delete' || e.key === 'Backspace') && !editing && active()) { e.preventDefault(); deleteActive(); }
+  else if (e.code === 'Space' && !editing) { spaceHeld = true; stageScroll.classList.add('pan-mode'); e.preventDefault(); }
   else if (e.key === 'Escape') { canvas.discardActiveObject(); canvas.requestRenderAll(); updateProperties(); }
 });
+document.addEventListener('keyup', e => { if (e.code === 'Space') { spaceHeld = false; if (!panMode) stageScroll.classList.remove('pan-mode'); stopPan(); } });
 
-const effectDefaults = { blur: 0, brightness: 0, contrast: 0, saturation: 0, grayscale: false, sepia: false };
+const effectDefaults = { blur: 0, brightness: 0, contrast: 0, saturation: 0, grayscale: false, sepia: false, glow: 0 };
 function getEffectValues(obj) { return { ...effectDefaults, ...(obj.vposterEffects || {}) }; }
 function syncEffectControls(obj) {
   const v = getEffectValues(obj);
   ['blur','brightness','contrast','saturation'].forEach(k => { $(`effect${k[0].toUpperCase()}${k.slice(1)}`).value = v[k]; $(`${k}Label`).textContent = Number(v[k]).toFixed(2); });
+  $('effectGlow').value = v.glow || 0; $('glowLabel').textContent = String(v.glow || 0);
   $('effectGrayscale').classList.toggle('on', v.grayscale); $('effectSepia').classList.toggle('on', v.sepia);
 }
 function applyImageEffects(patch = {}, reset = false) {
@@ -250,9 +266,26 @@ function applyImageEffects(patch = {}, reset = false) {
   if (values.saturation !== 0) f.push(new filters.Saturation({ saturation: Number(values.saturation) }));
   if (values.grayscale) f.push(new filters.Grayscale());
   if (values.sepia) f.push(new filters.Sepia());
-  obj.vposterEffects = values; obj.filters = f; obj.applyFilters(); canvas.requestRenderAll(); syncEffectControls(obj); scheduleHistory();
+  obj.vposterEffects = values; obj.filters = f; obj.applyFilters();
+  obj.set('shadow', values.glow > 0 ? `rgba(167,139,250,0.9) 0px 0px ${Number(values.glow)}px` : null);
+  canvas.requestRenderAll(); syncEffectControls(obj); scheduleHistory();
 }
 ['blur','brightness','contrast','saturation'].forEach(k => $(`effect${k[0].toUpperCase()}${k.slice(1)}`).addEventListener('input', e => applyImageEffects({ [k]: Number(e.target.value) })));
+$('effectGlow').addEventListener('input', e => applyImageEffects({ glow: Number(e.target.value) }));
+$('effectPreset').addEventListener('change', e => {
+  const presets = {
+    none: { blur: 0, brightness: 0, contrast: 0, saturation: 0, grayscale: false, sepia: false, glow: 0 },
+    soft: { blur: .18, brightness: .04, contrast: .02, saturation: -.08, grayscale: false, sepia: false, glow: 0 },
+    dream: { blur: .08, brightness: .12, contrast: -.08, saturation: .12, grayscale: false, sepia: false, glow: 20 },
+    bright: { blur: 0, brightness: .2, contrast: .08, saturation: .12, grayscale: false, sepia: false, glow: 12 },
+    cinema: { blur: 0, brightness: -.04, contrast: .24, saturation: -.18, grayscale: false, sepia: false, glow: 0 },
+    vivid: { blur: 0, brightness: .03, contrast: .18, saturation: .55, grayscale: false, sepia: false, glow: 0 },
+    mono: { blur: 0, brightness: 0, contrast: .1, saturation: 0, grayscale: true, sepia: false, glow: 0 },
+    vintage: { blur: .02, brightness: .06, contrast: -.08, saturation: -.35, grayscale: false, sepia: true, glow: 0 },
+    frost: { blur: .12, brightness: .16, contrast: -.12, saturation: -.15, grayscale: false, sepia: false, glow: 8 }
+  };
+  applyImageEffects(presets[e.target.value] || presets.none);
+});
 $('effectGrayscale').addEventListener('click', () => { const o = active(); if (o?.type === 'image') applyImageEffects({ grayscale: !getEffectValues(o).grayscale }); });
 $('effectSepia').addEventListener('click', () => { const o = active(); if (o?.type === 'image') applyImageEffects({ sepia: !getEffectValues(o).sepia }); });
 $('resetEffects').addEventListener('click', () => applyImageEffects({}, true));

@@ -49,3 +49,13 @@
 .effect-presets{display:grid;grid-template-columns:1fr 1fr;gap:7px}.effect-presets #resetEffects{grid-column:1/-1}.effect-presets .on{border-color:#8c75d5;background:#382e53;color:#d7caff}
 .projects-card{max-height:min(80vh,680px);overflow:auto}.saved-projects{display:flex;flex-direction:column;gap:8px;margin-top:17px}.saved-project-row{display:flex;align-items:center;gap:8px;border:1px solid #373444;background:#22212d;border-radius:10px;padding:7px}.saved-project-open{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;text-align:left;border:0;background:transparent;padding:7px}.saved-project-open b{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.saved-project-open small{font-size:10px;color:#9996ad}.project-delete{width:31px;height:31px;border:1px solid #413344;background:#30232d;color:#f4a5b3;border-radius:8px;font-size:18px}.projects-card .full-btn{margin-top:0}
 @media(max-width:540px){#projectsBtn{display:none}}
+
+/* Expanded GFX preset picker and hand/pan navigation */
+#effectPreset{width:100%;border:1px solid #49415f;border-radius:8px;background:#242131;color:#f0eef8;padding:10px;font-size:11px}
+#effectGlow{width:100%;accent-color:#c4a7ff}
+#panBtn.on{border-color:#9b7bff;background:#382e53;color:#e0d5ff}
+.stage-scroll.pan-mode{cursor:grab;touch-action:none}
+.stage-scroll.panning{cursor:grabbing;user-select:none}
+.properties{background:linear-gradient(180deg,#191922 0%,#171720 100%)}
+.properties-header{position:sticky;top:-23px;z-index:2;padding:8px 0;background:#191922}
+@media(max-width:900px){.properties-header{top:-20px}.stage-scroll.pan-mode{touch-action:none}}
