@@ -18,7 +18,8 @@
   .leftbar{display:none}
   .editor-area{height:100%;width:100%;grid-column:auto;grid-row:auto}
   .editor-toolbar{height:42px;padding:0 12px}
-  .stage-scroll{padding:12px 8px;align-items:center;justify-content:center;overflow:auto}
+  .stage-scroll{padding:10px 8px 28px;align-items:center;justify-content:center;overflow:hidden}
+  .stage-wrap{margin-top:-58px;flex-shrink:0}
   .editor-footer{height:26px}
   .sidebar,.properties{display:block;position:fixed;z-index:31;left:8px;right:8px;bottom:74px;top:auto;width:auto;max-height:min(68dvh,650px);border:1px solid #393448;border-radius:16px 16px 12px 12px;box-shadow:0 20px 70px #000b;transform:translateY(calc(100% + 100px));transition:transform .22s ease;overflow:auto;padding-bottom:22px}
   .sidebar.mobile-open,.properties.mobile-open{transform:translateY(0)}
@@ -39,6 +40,7 @@
   .top-actions .btn{padding:9px 10px}
   .editor-tools .mini-btn{font-size:9px}
   .crumb{max-width:60%}
-  .stage-scroll{padding:10px 5px}
+  .stage-scroll{padding:8px 5px 24px}
+  .stage-wrap{margin-top:-62px}
   .editor-footer span:last-child{display:none}
 }

@@ -208,9 +208,19 @@ function applyCanvasSize(w, h) {
 }
 $('zoomRange').addEventListener('input', () => setZoom(Number($('zoomRange').value) / 100));
 $('zoomOut').addEventListener('click', () => setZoom(zoom - .1)); $('zoomIn').addEventListener('click', () => setZoom(zoom + .1));
-$('fitBtn').addEventListener('click', () => {
-  const area = $('stageScroll'); setZoom(Math.min((area.clientWidth - 90) / canvas.getWidth(), (area.clientHeight - 70) / canvas.getHeight(), 1));
-});
+function fitCanvasToWorkspace() {
+  const area = $('stageScroll');
+  if (!area || !area.clientWidth || !area.clientHeight) return;
+  if (window.innerWidth <= 900) {
+    // Keep a compact, app-like canvas on phones, leaving room for tools and property sheets.
+    const byWidth = (area.clientWidth * 0.55) / canvas.getWidth();
+    const byHeight = (area.clientHeight * 0.48) / canvas.getHeight();
+    setZoom(Math.min(0.36, byWidth, byHeight));
+  } else {
+    setZoom(Math.min((area.clientWidth - 90) / canvas.getWidth(), (area.clientHeight - 70) / canvas.getHeight(), 1));
+  }
+}
+$('fitBtn').addEventListener('click', fitCanvasToWorkspace);
 $('undoBtn').addEventListener('click', () => travelHistory(-1)); $('redoBtn').addEventListener('click', () => travelHistory(1));
 document.addEventListener('keydown', (e) => {
   const tag = document.activeElement?.tagName;
@@ -241,7 +251,7 @@ $('downloadExport').addEventListener('click', () => {
   const a = document.createElement('a'); a.href = dataURL; a.download = `${name}.${format === 'jpeg' ? 'jpg' : 'png'}`; a.click();
   $('exportModal').classList.add('hidden'); toast('Export selesai. Cek folder Download kamu.');
 });
-window.addEventListener('resize', () => { if (window.innerWidth < 900) { const area = $('stageScroll'); if (area.clientWidth > 0 && area.clientHeight > 0) setZoom(Math.min(zoom, (area.clientWidth - 24) / canvas.getWidth(), (area.clientHeight - 24) / canvas.getHeight(), 1)); } });
+window.addEventListener('resize', () => { if (window.innerWidth <= 900) fitCanvasToWorkspace(); });
 function closeMobilePanels() {
   $('sidebar').classList.remove('mobile-open'); $('properties').classList.remove('mobile-open');
   $('mobileBackdrop').classList.remove('show');
@@ -261,10 +271,10 @@ document.querySelectorAll('[data-mobile]').forEach(btn => btn.addEventListener('
 $('mobileBackdrop').addEventListener('click', closeMobilePanels);
 canvas.on('selection:created', () => { updateProperties(); if (window.innerWidth <= 900) openMobilePanel('properties'); });
 canvas.on('selection:updated', () => { updateProperties(); if (window.innerWidth <= 900) openMobilePanel('properties'); });
-window.addEventListener('resize', () => { if (window.innerWidth > 900) closeMobilePanels(); else { const area = $('stageScroll'); setZoom(Math.min(zoom, (area.clientWidth - 28) / canvas.getWidth(), (area.clientHeight - 28) / canvas.getHeight(), 1)); } });
+window.addEventListener('resize', () => { if (window.innerWidth > 900) closeMobilePanels(); else fitCanvasToWorkspace(); });
 
 updateProjectName(); resizeStage(); pushHistory(); updateProperties();
-setTimeout(() => $('fitBtn').click(), 60);
+setTimeout(() => fitCanvasToWorkspace(), 100);
 
 // Restore the last autosaved local draft, when available.
 try {
