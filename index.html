@@ -50,7 +50,7 @@
         </section>
         <section id="panel-canvas" class="panel hidden">
           <div class="panel-heading"><div><p class="eyebrow">DOCUMENT</p><h2>Pengaturan kanvas</h2></div></div>
-          <div class="field"><label>Preset ukuran</label><select id="sizePreset"><option value="poster">Poster portrait · 1080 × 1350</option><option value="story">Story · 1080 × 1920</option><option value="square">Kotak · 1080 × 1080</option><option value="landscape">Landscape · 1920 × 1080</option><option value="custom">Ukuran khusus</option></select></div>
+          <div class="field"><label>Preset ukuran</label><select id="sizePreset"><option value="poster">Poster portrait · 1080 × 1350</option><option value="a4p">A4 Portrait · 2480 × 3508 (300 DPI)</option><option value="a4l">A4 Landscape · 3508 × 2480 (300 DPI)</option><option value="a3p">A3 Portrait · 3508 × 4961 (300 DPI)</option><option value="a5p">A5 Portrait · 1748 × 2480 (300 DPI)</option><option value="letter">US Letter · 2550 × 3300 (300 DPI)</option><option value="story">Story · 1080 × 1920</option><option value="square">Kotak · 1080 × 1080</option><option value="landscape">Landscape · 1920 × 1080</option><option value="custom">Ukuran khusus</option></select></div>
           <div id="customSize" class="size-row hidden"><div class="field"><label>Lebar</label><input id="canvasW" type="number" min="100" max="4000" value="1080"></div><div class="field"><label>Tinggi</label><input id="canvasH" type="number" min="100" max="4000" value="1350"></div><button id="applySize" class="btn primary">Terapkan</button></div>
           <div class="section-label">TAMPILAN</div>
           <div class="field"><label>Zoom area kerja</label><div class="zoom-row"><button id="zoomOut" class="icon-btn">−</button><input id="zoomRange" type="range" min="25" max="100" value="60"><button id="zoomIn" class="icon-btn">＋</button><b id="zoomLabel">60%</b></div></div>
@@ -99,6 +99,13 @@
         </div>
       </aside>
     </main>
+    <nav class="mobile-dock" aria-label="Menu editor mobile">
+      <button data-mobile="add" class="mobile-action"><span>＋</span>Tambah</button>
+      <button data-mobile="layers" class="mobile-action"><span>▤</span>Layer</button>
+      <button data-mobile="canvas" class="mobile-action"><span>▧</span>Kertas</button>
+      <button data-mobile="properties" class="mobile-action"><span>☷</span>Properti</button>
+    </nav>
+    <div id="mobileBackdrop" class="mobile-backdrop"></div>
     <div id="toast" class="toast" role="status"></div>
     <div id="exportModal" class="modal hidden"><div class="modal-card"><button id="closeModal" class="modal-close">×</button><div class="modal-icon">↓</div><h2>Poster siap diekspor</h2><p>Gambar akan dirender pada resolusi asli kanvas.</p><div class="field"><label>Format file</label><select id="exportFormat"><option value="png">PNG · kualitas terbaik</option><option value="jpeg">JPG · ukuran lebih kecil</option></select></div><div class="field"><label>Nama file</label><input id="exportName" value="poster-vposter"></div><button id="downloadExport" class="btn primary full-btn">Download poster</button></div></div>
   </div>

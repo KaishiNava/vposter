@@ -9,3 +9,36 @@
 @media(max-width:1150px){.layout{grid-template-columns:62px 220px minmax(280px,1fr) 245px}.brand{min-width:190px}.panel{padding:20px 13px}.properties{padding:20px 13px}.keyboard-tip{display:none}.topbar{padding:0 14px;gap:15px}}
 @media(max-width:900px){.layout{grid-template-columns:58px minmax(0,1fr);height:calc(100vh - 60px)}.topbar{height:60px}.brand{min-width:auto;font-size:14px}.project-name{max-width:190px}.sidebar,.properties{display:none}.editor-area{grid-column:2;grid-row:1}.leftbar{grid-column:1;grid-row:1}.editor-toolbar{padding:0 10px}.stage-scroll{padding:15px 8px}.editor-footer{padding:0 8px}.top-actions{gap:5px}.top-actions .btn{padding:9px 10px}.top-actions .secondary{display:none}.divider{display:none}}
 @media(max-width:540px){.brand>span:last-child{display:none}.brand{min-width:30px}.topbar{gap:10px;padding:0 9px}.project-name{max-width:none}.top-actions .icon-btn{display:none}.top-actions .btn{font-size:10px;padding:9px}.editor-toolbar{height:43px}.crumb{max-width:58%}.editor-tools{gap:5px}.mini-btn{padding:6px}.stage-scroll{align-items:center}.editor-footer{font-size:8px}.editor-footer span:last-child{display:none}}
+
+/* Mobile-first editor behavior: canvas stays central, tools open as bottom sheets. */
+.mobile-dock,.mobile-backdrop{display:none}
+@media(max-width:900px){
+  body{overflow:hidden}
+  .layout{height:calc(100dvh - 60px - 66px);min-height:300px;grid-template-columns:minmax(0,1fr);display:block}
+  .leftbar{display:none}
+  .editor-area{height:100%;width:100%;grid-column:auto;grid-row:auto}
+  .editor-toolbar{height:42px;padding:0 12px}
+  .stage-scroll{padding:12px 8px;align-items:center;justify-content:center;overflow:auto}
+  .editor-footer{height:26px}
+  .sidebar,.properties{display:block;position:fixed;z-index:31;left:8px;right:8px;bottom:74px;top:auto;width:auto;max-height:min(68dvh,650px);border:1px solid #393448;border-radius:16px 16px 12px 12px;box-shadow:0 20px 70px #000b;transform:translateY(calc(100% + 100px));transition:transform .22s ease;overflow:auto;padding-bottom:22px}
+  .sidebar.mobile-open,.properties.mobile-open{transform:translateY(0)}
+  .mobile-backdrop.show{display:block;position:fixed;inset:60px 0 65px;z-index:30;background:#07070b99;backdrop-filter:blur(2px)}
+  .mobile-dock{display:flex;position:fixed;z-index:35;left:0;right:0;bottom:0;height:66px;padding:6px 8px calc(6px + env(safe-area-inset-bottom));justify-content:space-around;align-items:center;background:#191821;border-top:1px solid #34313f}
+  .mobile-action{min-width:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:transparent;border:0;border-radius:9px;color:#aaa6bc;font-size:10px;padding:5px 12px}
+  .mobile-action span{font-size:20px;line-height:22px;color:#c3b2ff}
+  .mobile-action:active{background:#322943}
+  .top-actions .secondary{display:none}
+  .stage-wrap{max-width:none}
+  .panel{padding:19px 16px}
+  .quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .properties{max-height:min(70dvh,700px)}
+}
+@media(max-width:540px){
+  .layout{height:calc(100dvh - 60px - 66px)}
+  .project-name{font-size:11px}
+  .top-actions .btn{padding:9px 10px}
+  .editor-tools .mini-btn{font-size:9px}
+  .crumb{max-width:60%}
+  .stage-scroll{padding:10px 5px}
+  .editor-footer span:last-child{display:none}
+}

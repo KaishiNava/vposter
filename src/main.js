@@ -23,8 +23,9 @@ function resizeStage() {
   const wrap = $('stageWrap');
   wrap.style.width = `${canvas.getWidth() * zoom}px`;
   wrap.style.height = `${canvas.getHeight() * zoom}px`;
-  canvas.setDimensions({ width: canvas.getWidth(), height: canvas.getHeight() });
-  canvas.setZoom(zoom);
+  // Keep the document in true pixel coordinates; scale only its displayed CSS size.
+  canvas.setDimensions({ width: canvas.getWidth() * zoom, height: canvas.getHeight() * zoom }, { cssOnly: true });
+  canvas.setZoom(1);
   canvas.calcOffset();
   $('zoomRange').value = Math.round(zoom * 100);
   $('zoomLabel').textContent = `${Math.round(zoom * 100)}%`;
@@ -197,13 +198,13 @@ document.querySelectorAll('.tool[data-panel]').forEach(btn => btn.addEventListen
 }));
 $('sizePreset').addEventListener('change', () => {
   const preset = $('sizePreset').value; $('customSize').classList.toggle('hidden', preset !== 'custom');
-  const sizes = { poster: [1080, 1350], story: [1080, 1920], square: [1080, 1080], landscape: [1920, 1080] };
+  const sizes = { poster: [1080, 1350], a4p: [2480, 3508], a4l: [3508, 2480], a3p: [3508, 4961], a5p: [1748, 2480], letter: [2550, 3300], story: [1080, 1920], square: [1080, 1080], landscape: [1920, 1080] };
   if (sizes[preset]) applyCanvasSize(...sizes[preset]);
 });
 $('applySize').addEventListener('click', () => applyCanvasSize(clamp($('canvasW').value, 100, 4000), clamp($('canvasH').value, 100, 4000)));
 function applyCanvasSize(w, h) {
   canvas.setDimensions({ width: w, height: h }); $('canvasW').value = w; $('canvasH').value = h;
-  setZoom(Math.min(zoom, 760 / w, 650 / h)); canvas.requestRenderAll(); scheduleHistory();
+  const area = $('stageScroll'); setZoom(Math.min(zoom, (area.clientWidth - 36) / w, (area.clientHeight - 36) / h, 1)); canvas.requestRenderAll(); scheduleHistory();
 }
 $('zoomRange').addEventListener('input', () => setZoom(Number($('zoomRange').value) / 100));
 $('zoomOut').addEventListener('click', () => setZoom(zoom - .1)); $('zoomIn').addEventListener('click', () => setZoom(zoom + .1));
@@ -241,6 +242,28 @@ $('downloadExport').addEventListener('click', () => {
   $('exportModal').classList.add('hidden'); toast('Export selesai. Cek folder Download kamu.');
 });
 window.addEventListener('resize', () => { if (window.innerWidth < 900) setZoom(Math.min(zoom, .55)); });
+function closeMobilePanels() {
+  $('sidebar').classList.remove('mobile-open'); $('properties').classList.remove('mobile-open');
+  $('mobileBackdrop').classList.remove('show');
+}
+function openMobilePanel(which) {
+  if (window.innerWidth > 900) return;
+  closeMobilePanels();
+  if (which === 'properties') $('properties').classList.add('mobile-open');
+  else {
+    $('sidebar').classList.add('mobile-open');
+    document.querySelectorAll('.tool[data-panel]').forEach(b => b.classList.toggle('active', b.dataset.panel === which));
+    ['add','layers','canvas'].forEach(p => $(`panel-${p}`).classList.toggle('hidden', p !== which));
+  }
+  $('mobileBackdrop').classList.add('show');
+}
+document.querySelectorAll('[data-mobile]').forEach(btn => btn.addEventListener('click', () => openMobilePanel(btn.dataset.mobile)));
+$('mobileBackdrop').addEventListener('click', closeMobilePanels);
+$('sidebar').id = 'sidebar'; $('properties').id = 'properties';
+canvas.on('selection:created', () => { updateProperties(); if (window.innerWidth <= 900) openMobilePanel('properties'); });
+canvas.on('selection:updated', () => { updateProperties(); if (window.innerWidth <= 900) openMobilePanel('properties'); });
+window.addEventListener('resize', () => { if (window.innerWidth > 900) closeMobilePanels(); else { const area = $('stageScroll'); setZoom(Math.min(zoom, (area.clientWidth - 28) / canvas.getWidth(), (area.clientHeight - 28) / canvas.getHeight(), 1)); } });
+
 updateProjectName(); resizeStage(); pushHistory(); updateProperties();
 setTimeout(() => $('fitBtn').click(), 60);
 
